@@ -1,4 +1,4 @@
-.PHONY: help version build buildongithubactions pushtodockerhub pushtoawsecr test down cleandocker
+.PHONY: help version build buildongithubactions pushtodockerhub pushtoawsecr releaseAzure test down cleandocker
 
 VERSION_PHP        := $(VERSION_PHP)
 VERSION_PHP_MINOR  := $(shell cut -d '.' -f 1 <<< $(VERSION_PHP)).$(shell cut -d '.' -f 2 <<< $(VERSION_PHP))
@@ -11,11 +11,17 @@ IS_LATEST              := $(IS_LATEST)
 GIT_COMMIT_HASH  := $(shell git rev-parse --short HEAD)
 AWS_REGION       := $(AWS_REGION)
 AWS_ACCOUNT_ID   := $(AWS_ACCOUNT_ID)
+ACR_NAME         := $(ACR_NAME)
 
-NAME_VENDOR      := dwchiang
-NAME_PROJECT     := nginx-php-fpm
-NAME_IMAGE_REPO  := $(NAME_VENDOR)/$(NAME_PROJECT)
-TAG_REPO_URI_AWS := public.ecr.aws/n0b9n5m7/nginx-php-fpm
+NAME_VENDOR        := dwchiang
+NAME_PROJECT       := nginx-php-fpm
+NAME_IMAGE_REPO    := $(NAME_VENDOR)/$(NAME_PROJECT)
+TAG_REPO_URI_AWS   := public.ecr.aws/n0b9n5m7/nginx-php-fpm
+TAG_REPO_URI_AZURE := $(ACR_NAME).azurecr.io/$(NAME_PROJECT)
+
+# Platforms to build. Override by exporting PLATFORMS before running make,
+# e.g. `PLATFORMS=linux/amd64 make releaseAzure` for a single-arch build.
+PLATFORMS ?= linux/amd64,linux/arm64
 
 VERSION_LARAVEL      := $(VERSION_LARAVEL)
 NAME_PROJECT_LARAVEL := laravel-$(VERSION_LARAVEL)
@@ -47,6 +53,7 @@ version:
 	@ echo '  "VERSION":               "$(VERSION)"'
 	@ echo '  "NAME_IMAGE_REPO":       "$(NAME_IMAGE_REPO)"'
 	@ echo '  "TAG_REPO_URI_AWS":      "$(TAG_REPO_URI_AWS)"'
+	@ echo '  "TAG_REPO_URI_AZURE":    "$(TAG_REPO_URI_AZURE)"'
 	@ echo '  "VERSION_LARAVEL":       "$(VERSION_LARAVEL)"'
 	@ echo '  "NAME_PROJECT_LARAVEL":  "$(NAME_PROJECT_LARAVEL)"'
 	@ echo '}'
@@ -140,6 +147,47 @@ else
 	echo 'IS_LATEST=false or unknown'
 
 	docker buildx build --progress=plain --push --platform=linux/amd64,linux/arm64 -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(NAME_IMAGE_REPO):$(VERSION) .
+endif
+
+	docker buildx stop
+	docker buildx rm buildnginxphpfpm
+
+	docker images
+
+	@ echo '====================================================================='
+	@ echo '====================================================================='
+
+	sleep 15
+
+releaseAzure: version cleandocker
+	@ echo '====================================================================='
+	@ echo '====================================================================='
+	@ echo '[] Building image and push to Azure Container Registry ...'
+
+	@ if [ -z "$(ACR_NAME)" ]; then \
+		echo 'ERROR: ACR_NAME is not set. Export ACR_NAME=<your-registry> before running `make releaseAzure`.'; \
+		exit 1; \
+	fi
+
+	@ echo '[] Assuming `az acr login --name $(ACR_NAME)` has already been run in this shell.'
+
+	@ echo '[] Check Docker environment...'
+	docker version
+	docker buildx ls
+
+	docker buildx ls
+	docker buildx create --name buildnginxphpfpm
+	docker buildx use buildnginxphpfpm
+	docker buildx inspect --bootstrap
+
+ifeq ($(IS_LATEST),true)
+	echo 'IS_LATEST=true'
+
+	docker buildx build --progress=plain --push --platform=$(PLATFORMS) -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(TAG_REPO_URI_AZURE):latest -t $(TAG_REPO_URI_AZURE):$(VERSION) .
+else
+	echo 'IS_LATEST=false or unknown'
+
+	docker buildx build --progress=plain --push --platform=$(PLATFORMS) -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(TAG_REPO_URI_AZURE):$(VERSION) .
 endif
 
 	docker buildx stop

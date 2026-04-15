@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-04-15
+
+- Added PHP: `8.4.20`
+- Added Nginx: `1.30.0` (stable branch; switched apt/apk source from `mainline` to stable)
+- Added OS CODE: `trixie` (Debian 13) — now the `latest` tag
+- Added OS CODE: `alpine3.22` (replaces `alpine3.21`; upstream `php:8.4.20-fpm-alpine3.21` is not published)
+- Removed OS CODE: `buster`, `bullseye`, `alpine3.13`, `alpine3.14`, `alpine3.15`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine3.20`, `alpine3.21`
+- Removed PHP branches: `7.2`, `7.3`, `7.4`, `8.0`, `8.1`, `8.2` (only `8.3` and `8.4` remain in the maintained matrix)
+
 ## 2024-09-13
 
 - Added Nginx: `1.26.2`, `1.27.1`

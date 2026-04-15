@@ -1,2 +1,6 @@
 backup
 *.log
+.claude
+.idea
+.env
+Dockerfiles/.env
