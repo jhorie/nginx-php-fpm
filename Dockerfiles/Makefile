@@ -13,9 +13,10 @@ AWS_REGION       := $(AWS_REGION)
 AWS_ACCOUNT_ID   := $(AWS_ACCOUNT_ID)
 ACR_NAME         := $(ACR_NAME)
 
-NAME_VENDOR        := dwchiang
+NAME_VENDOR        ?= dwchiang
 NAME_PROJECT       := nginx-php-fpm
 NAME_IMAGE_REPO    := $(NAME_VENDOR)/$(NAME_PROJECT)
+DOCKERHUB_USER     ?= $(NAME_VENDOR)
 TAG_REPO_URI_AWS   := public.ecr.aws/n0b9n5m7/nginx-php-fpm
 TAG_REPO_URI_AZURE := $(ACR_NAME).azurecr.io/$(NAME_PROJECT)
 
@@ -127,8 +128,7 @@ releaseDockerHub: version cleandocker
 	@ echo '====================================================================='
 	@ echo '[] Building images and push to Docker Hub ...'
 
-	@ echo '[] Login Docker Hub...'
-	cat ~/.docker/dhtoken.txt | docker login -u dwchiang --password-stdin
+	@ echo '[] Assuming `docker login` (as $(DOCKERHUB_USER)) has already been run in this shell.'
 
 	@ echo '[] Check Docker environment...'
 	docker version
@@ -142,11 +142,11 @@ releaseDockerHub: version cleandocker
 ifeq ($(IS_LATEST),true)
 	echo 'IS_LATEST=true'
 
-	docker buildx build --progress=plain --push --platform=linux/amd64,linux/arm64 -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(NAME_IMAGE_REPO):latest -t $(NAME_IMAGE_REPO):$(VERSION) .
+	docker buildx build --progress=plain --push --platform=$(PLATFORMS) -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(NAME_IMAGE_REPO):latest -t $(NAME_IMAGE_REPO):$(VERSION) .
 else
 	echo 'IS_LATEST=false or unknown'
 
-	docker buildx build --progress=plain --push --platform=linux/amd64,linux/arm64 -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(NAME_IMAGE_REPO):$(VERSION) .
+	docker buildx build --progress=plain --push --platform=$(PLATFORMS) -f $(VERSION_OS)/Dockerfile-$(VERSION) -t $(NAME_IMAGE_REPO):$(VERSION) .
 endif
 
 	docker buildx stop

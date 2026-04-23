@@ -35,5 +35,4 @@ if [ "$1" = "nginx" -o "$1" = "nginx-debug" ]; then
     fi
 fi
 
-# exec "$@"
-supervisord -n -c /etc/supervisord.conf
+exec supervisord -n -c /etc/supervisord.conf
